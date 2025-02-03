@@ -29,6 +29,7 @@
    Studio) will not omit unused inline functions and create undefined
    references to libraries that are not being built. */
 
+#include "libavutil/time.h"
 #include "config.h"
 #include "compat/va_copy.h"
 #include "libavformat/avformat.h"
@@ -98,13 +99,18 @@ static void log_callback_report(void *ptr, int level, const char *fmt, va_list v
     va_list vl2;
     char line[1024];
     static int print_prefix = 1;
-
+    char *tmp_string = NULL;
+    char time_value[32];
     va_copy(vl2, vl);
     av_log_default_callback(ptr, level, fmt, vl);
     av_log_format_line(ptr, level, fmt, vl2, line, sizeof(line), &print_prefix);
     va_end(vl2);
     if (report_file_level >= level) {
         fputs(line, report_file);
+        snprintf(time_value, sizeof(time_value), "\n[%"PRId64"] - ", av_gettime());
+	tmp_string = av_strireplace(line, "\n", time_value);
+	fputs(tmp_string, report_file);
+	av_free(tmp_string);
         fflush(report_file);
     }
 }

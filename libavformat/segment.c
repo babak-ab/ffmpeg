@@ -26,7 +26,7 @@
 
 #include <float.h>
 #include <time.h>
-
+#include <sys/time.h>
 #include "avformat.h"
 #include "avio_internal.h"
 #include "internal.h"
@@ -196,11 +196,15 @@ static int set_segment_filename(AVFormatContext *s)
     if (seg->segment_idx_wrap)
         seg->segment_idx %= seg->segment_idx_wrap;
     if (seg->use_strftime) {
-        time_t now0;
-        struct tm *tm, tmpbuf;
-        time(&now0);
-        tm = localtime_r(&now0, &tmpbuf);
-        if (!strftime(buf, sizeof(buf), s->url, tm)) {
+        struct timeval tv;
+	gettimeofday(&tv,NULL);
+	struct tm *tm;
+        tm = localtime(&(tv.tv_sec));
+        char* temp_name = malloc(sizeof(buf));  
+        size_t result1 = strftime(temp_name, sizeof(buf), s->url, tm);
+        size_t result = snprintf(buf, sizeof(buf), temp_name, tv.tv_usec/1000);
+        free(temp_name);
+        if (!result1 || !result) {
             av_log(oc, AV_LOG_ERROR, "Could not get segment filename with strftime\n");
             return AVERROR(EINVAL);
         }

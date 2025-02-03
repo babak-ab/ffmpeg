@@ -202,14 +202,18 @@ static int filter_frame(AVFilterLink *inlink, AVFrame *picref)
             /* black starts here */
             s->black_started = 1;
             s->black_start = picref->pts;
+            av_log(ctx, AV_LOG_INFO, "lavfi.black_start\n");
             av_dict_set(&picref->metadata, "lavfi.black_start",
                 av_ts2timestr(s->black_start, &s->time_base), 0);
+                
+            
         }
     } else if (s->black_started) {
         /* black ends here */
         s->black_started = 0;
         s->black_end = picref->pts;
-        check_black_end(ctx);
+        av_log(ctx, AV_LOG_INFO, "lavfi.black_end\n");
+        check_black_end(ctx);        
         av_dict_set(&picref->metadata, "lavfi.black_end",
             av_ts2timestr(s->black_end, &s->time_base), 0);
     }

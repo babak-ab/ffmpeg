@@ -23,6 +23,8 @@
 #include "config.h"
 #include <float.h>
 #include <stdint.h>
+#include <time.h>
+#include <sys/time.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -260,6 +262,7 @@ typedef struct HLSContext {
 
 static int strftime_expand(const char *fmt, char **dest)
 {
+/*
     int r = 1;
     time_t now0;
     struct tm *tm, tmpbuf;
@@ -276,8 +279,25 @@ static int strftime_expand(const char *fmt, char **dest)
         av_free(buf);
         return AVERROR(EINVAL);
     }
-    *dest = buf;
-
+    /*/
+    
+    
+    
+    	char *buf;
+        buf = av_mallocz(MAX_URL_SIZE);
+        struct timeval tv;
+	gettimeofday(&tv,NULL);
+	struct tm *tm;
+        tm = localtime(&(tv.tv_sec));
+        char* temp_name = malloc(MAX_URL_SIZE);  
+        size_t result1 = strftime(temp_name, MAX_URL_SIZE, fmt, tm);
+        size_t result = snprintf(buf, MAX_URL_SIZE, temp_name, tv.tv_usec/1000);
+   *dest = buf;
+   if (!result1 || !result) {
+             av_free(buf);
+        return AVERROR(EINVAL);
+        }
+    int r = result & result1;
     return r;
 }
 

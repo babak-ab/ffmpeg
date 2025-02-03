@@ -175,6 +175,9 @@ struct MpegTSContext {
     MpegTSFilter *pids[NB_PID_MAX];
     int current_pid;
 
+    /** base timestamp for smooth rolling over 33bits */
+    int64_t base_ts;
+
     AVStream *epg_stream;
     AVBufferPool* pools[32];
 };
@@ -998,7 +1001,25 @@ static void new_data_packet(const uint8_t *buffer, int len, AVPacket *pkt)
     pkt->data = (uint8_t *)buffer;
     pkt->size = len;
 }
+static int64_t unroll_timestamp(MpegTSContext *ts, int64_t t)
+{
+    int64_t dt;
 
+    if (t == AV_NOPTS_VALUE)
+       return t;
+
+    if (!ts->base_ts)
+        ts->base_ts = t;
+
+    dt = (t - ts->base_ts) & 0x01ffffffffll;
+    if (dt & 0x0100000000ll) {
+        dt |= 0xffffffff00000000ll;
+    }
+
+    ts->base_ts += dt;
+
+    return ts->base_ts;
+}
 static int new_pes_packet(PESContext *pes, AVPacket *pkt)
 {
     uint8_t *sd;
@@ -1022,8 +1043,10 @@ static int new_pes_packet(PESContext *pes, AVPacket *pkt)
         pkt->stream_index = pes->sub_st->index;
     else
         pkt->stream_index = pes->st->index;
-    pkt->pts = pes->pts;
-    pkt->dts = pes->dts;
+    //pkt->pts = pes->pts;
+    //pkt->dts = pes->dts;
+    pkt->pts = unroll_timestamp(pes->ts, pes->pts);
+    pkt->dts = unroll_timestamp(pes->ts, pes->dts);
     /* store position of first TS packet of this PES packet */
     pkt->pos   = pes->ts_packet_pos;
     pkt->flags = pes->flags;
